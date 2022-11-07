@@ -318,12 +318,17 @@ static int _func_include(struct gdata *gdata)
 	// else, it's a function pointer
 	if(c == '"') {
 		while((c = fgetc(gdata->input)) != '"') {
-			if(c==EOF) {
+			switch(c) {
+			case EOF:
 				fprintf(stderr, "unexpected EOF looking for end of string\n");
 				return 1;
+			case '/':
+			case '-':
+			case '.':
+				c = '_';
+			default:
+				template[t_index++] = c;
 			}
-			if(c == '/') c = '_';
-			template[t_index++] = c;
 			// no length check, let it blow
 		}
 		template[t_index] = 0;
@@ -378,7 +383,7 @@ static int _func_include(struct gdata *gdata)
 					PERROR(fgetc);
 					return 1;
 				default:	/* $name */
-					if(fprintf(gdata->source_c, "ctx->%c", n)) {
+					if(fprintf(gdata->source_c, "ctx->%c", n) < 0) {
 						PERROR(fprintf);
 						return 1;
 					}
@@ -410,6 +415,10 @@ static int _func_include(struct gdata *gdata)
 	}
 
 	// 4. get context definition
+	if((c = ungetc(c, gdata->input)) == EOF) {
+		PERROR(ungetc);
+		return 1;
+	}
 	if(c == '{') {
 		// static definition
 		if(is_fptr) {
@@ -426,7 +435,7 @@ static int _func_include(struct gdata *gdata)
 			return 1;
 
 		// end line (plus pointer)
-		if(fprintf(gdata->source_c, ";\n\tvoid *inner_ctx = &inner_ctx_struct\n") < 0) {
+		if(fprintf(gdata->source_c, ";\n\tvoid *inner_ctx = &inner_ctx_struct;\n") < 0) {
 			PERROR(fprintf);
 			return 1;
 		}
@@ -447,7 +456,7 @@ static int _func_include(struct gdata *gdata)
 	}
 
 	// make the call
-	if(fprintf(stderr, "\tinner_template(file, inner_ctx);\n}\n") < 0) {
+	if(fprintf(gdata->source_c, "\tinner_template(file, inner_ctx);\n}\n") < 0) {
 		PERROR(fprintf);
 		return 1;
 	}
