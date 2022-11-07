@@ -168,9 +168,9 @@ including partials.
 
 ## include and file names
 
-Because C names can't have slashes (`/`) (or directory structure), slashes in names
+Because C names can't have slashes (`/`) or dots (`.`) (or directory structure) in names
 will be replaced with an underscore (`_`), eg:
 
-`"hello/world.tpl"` would become `"hello_world"`.
+`"hello/world.full.tpl"` would become `"hello_world_full"`.
 
 The tool should make that transparent.

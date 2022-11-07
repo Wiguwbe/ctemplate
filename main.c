@@ -20,8 +20,15 @@ int main(int argc, char**argv)
 		// handle filename
 		char *r = basename, *last_point=NULL;
 		for(char *l=argv[i];*l;l++,r++) {
-			*r = *l=='/'?*l:'_';
-			if(*l == '.') last_point = r;
+			switch(*l) {
+			case '.':
+				last_point = r;
+			case '/':
+				*r = '_';
+				break;
+			default:
+				*r = *l;
+			}
 		}
 		*r = 0;
 		if(last_point) *last_point = 0;

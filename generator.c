@@ -195,7 +195,16 @@ static int _handle_print(struct gdata *gdata)
 	}
 
 	// `<variable>`
-	return _code_until(gdata->input, gdata->source_c, '>');
+	if(_code_until(gdata->input, gdata->source_c, '>'))
+		return 1;
+
+	// close sentence
+	if(fprintf(gdata->source_c, ");\n") < 0) {
+		PERROR(fprintf);
+		return 1;
+	}
+
+	return 0;
 }
 
 static int _handle_func(struct gdata *gdata)
@@ -273,7 +282,7 @@ static int _print_text(struct gdata *gdata)
 		return 0;
 
 	if(fprintf(
-		gdata->data,
+		gdata->source_c,
 		"fwrite(_data_%s+%d, 1, %d, file);\n",
 		gdata->basename,
 		gdata->text_last,
@@ -492,13 +501,26 @@ static int _func_while(struct gdata *gdata)
 {
 	return _generic_func(gdata, "while");
 }
-
 static int _func_end(struct gdata *gdata)
 {
 	if(fprintf(gdata->source_c, "}\n") < 0) {
 		PERROR(fprintf);
 		return 1;
 	}
+
+	// read until '%}'
+	int c;
+	while((c = fgetc(gdata->input)) != '%') {
+		if(c == EOF) {
+			PERROR(fgetc);
+			return 1;
+		}
+	}
+	if((c = fgetc(gdata->input)) != '}') {
+		fprintf(stderr, "ctemplate: invalid format\n");
+		return 1;
+	}
+
 	return 0;
 }
 
@@ -694,7 +716,7 @@ int generate_template(FILE *input, char *basename)
 		}
 
 		// the data pointer
-		if(fprintf(c_file, "extern char *_data_%s;\n\n", basename) < 0) {
+		if(fprintf(c_file, "extern char _data_%s[];\n\n", basename) < 0) {
 			PERROR(fprintf);
 			goto _c_end;
 		}
@@ -706,7 +728,13 @@ int generate_template(FILE *input, char *basename)
 		}
 
 		// the source code
-		if(fprintf(c_file, "%s\n}\n", mem_source_c) < 0) {
+		if(fprintf(c_file, "%s\n", mem_source_c) < 0) {
+			PERROR(fprintf);
+			goto _c_end;
+		}
+
+		// return 0;
+		if(fprintf(c_file, "return 0;\n}\n") < 0) {
 			PERROR(fprintf);
 			goto _c_end;
 		}

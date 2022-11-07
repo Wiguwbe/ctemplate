@@ -32,10 +32,15 @@ int objcopy(uint8_t *input, char *basename)
 		fprintf(stderr, "filename would be too long\n");
 		return 1;
 	}
-	if((strtab_len = snprintf(strtab, 128, "\0_data%s\0", basename)) > 128) {
+	if((strtab_len = snprintf(strtab+1, 127, "_data_%s", basename)) > 126) {
 		fprintf(stderr, "objcopy: not enough memory for snprintf\n");
 		return 1;
 	}
+
+	// to include the NULL byte
+	// and the beggining of the file
+	*strtab = 0;
+	strtab_len+=2;
 
 	/*
 		0x00
@@ -60,10 +65,10 @@ int objcopy(uint8_t *input, char *basename)
 	// prepare headers
 	{ /* elf header */
 		memset(&elf_header, 0, sizeof elf_header);
-		elf_header.e_ident[0] = EI_MAG0;
-		elf_header.e_ident[1] = EI_MAG1;
-		elf_header.e_ident[2] = EI_MAG2;
-		elf_header.e_ident[3] = EI_MAG3;
+		elf_header.e_ident[0] = ELFMAG0;
+		elf_header.e_ident[1] = ELFMAG1;
+		elf_header.e_ident[2] = ELFMAG2;
+		elf_header.e_ident[3] = ELFMAG3;
 		elf_header.e_ident[4] = ELFCLASS64;
 		elf_header.e_ident[5] = ELFDATA2LSB;
 		elf_header.e_ident[6] = EV_CURRENT;
@@ -169,7 +174,7 @@ int objcopy(uint8_t *input, char *basename)
 		sy->st_name = 1;
 		sy->st_value = 0;	// points to the beginning
 		sy->st_size = 0;
-		sy->st_info = STT_NOTYPE | STB_GLOBAL;
+		sy->st_info = ELF64_ST_INFO(STB_GLOBAL, STT_NOTYPE);
 		sy->st_other = STV_DEFAULT;
 		sy->st_shndx = 1;	// address to .data
 	}
