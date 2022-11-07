@@ -183,3 +183,11 @@ This has a dynamic number of children, here are them:
 
 yey
 ```
+
+---
+
+## TODO
+
+- Better error reporting
+- Take CLI options (input-dir, output-dir)
+- Testing
