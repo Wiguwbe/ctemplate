@@ -2,3 +2,5 @@ sample-*
 *.o
 *.save
 ctemplate
+tpl-*
+a.out
