@@ -12,7 +12,7 @@
 #include "objcopy.h"
 
 // 1000 lines at 80 chars each
-#define _MEM_SIZE 8192
+#define _MEM_SIZE 16384
 
 struct gdata {
 	FILE *input;
