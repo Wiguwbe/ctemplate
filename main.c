@@ -24,6 +24,7 @@ int main(int argc, char**argv)
 			case '.':
 				last_point = r;
 			case '/':
+			case '-':
 				*r = '_';
 				break;
 			default:
