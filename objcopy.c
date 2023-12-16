@@ -12,8 +12,8 @@ int objcopy(uint8_t *input, char *basename)
 	// elf header
 	Elf64_Ehdr elf_header;
 	// no program header
-	// 5 sect headers (NULL, .data, .symtab, .strtab, .shstrtab)
-	Elf64_Shdr sect_header[5];
+	// 6 sect headers (NULL, .data, .symtab, .strtab, .shstrtab, .note.GNU-stack)
+	Elf64_Shdr sect_header[6];
 	char fname[128];
 	// symtab is only 2 symbols (null and _data_{basename})
 	Elf64_Sym symtab[2];
@@ -22,9 +22,9 @@ int objcopy(uint8_t *input, char *basename)
 	// strtab for symtab
 	uint8_t strtab[128];
 	int strtab_len;
-	// shstrtab (null, .data, .symtab, .strtab, .shstrtab)
-	uint8_t *shstrtab = "\0.symtab\0.strtab\0.shstrtab\0.data\0";
-	int shstrtab_len = 33;
+	// shstrtab (null, .data, .symtab, .strtab, .shstrtab, .note.GNU-stack)
+	uint8_t *shstrtab = "\0.symtab\0.strtab\0.shstrtab\0.data\0.note.GNU-stack\0";
+	int shstrtab_len = 49;
 	int data_len = strlen(input);
 	int status_code = 1;
 
@@ -49,16 +49,16 @@ int objcopy(uint8_t *input, char *basename)
 		0x40
 		Sect Headers
 
-		0x40 + 5*sizeof(Shdr)
+		0x40 + 6*sizeof(Shdr)
 		.data
 
-		0x40 + 5*sizeof(Shdr)+align(8)
+		0x40 + 6*sizeof(Shdr)+align(8)
 		.symtab
 
-		0x40 + 5*sizeof(Shdr)+align + 2*sizeof(Sym)
+		0x40 + 6*sizeof(Shdr)+align + 2*sizeof(Sym)
 		.strtab
 
-		0x40+5*sizeof(Shdr)+align(8) + 2*sizeof(Sym)+len(strtab)
+		0x40 + 6*sizeof(Shdr)+align(8) + 2*sizeof(Sym)+len(strtab)
 		.shstrtab
 	*/
 
@@ -86,7 +86,7 @@ int objcopy(uint8_t *input, char *basename)
 		elf_header.e_phentsize = sizeof(Elf64_Phdr);	// not relevant tho
 		elf_header.e_phnum = 0;
 		elf_header.e_shentsize = sizeof(Elf64_Shdr);
-		elf_header.e_shnum = 5;
+		elf_header.e_shnum = 6;
 		elf_header.e_shstrndx = 4;	// last one
 	}
 
@@ -112,7 +112,7 @@ int objcopy(uint8_t *input, char *basename)
 		hdr->sh_type = SHT_PROGBITS;
 		hdr->sh_flags = SHF_WRITE|SHF_ALLOC;
 		hdr->sh_addr = 0;
-		hdr->sh_offset = 0x40 + 5 * sizeof(Elf64_Shdr);
+		hdr->sh_offset = 0x40 + 6 * sizeof(Elf64_Shdr);
 		hdr->sh_size = data_len;
 		hdr->sh_link = 0;
 		hdr->sh_info = 0;
@@ -164,6 +164,19 @@ int objcopy(uint8_t *input, char *basename)
 		hdr->sh_addralign = 1;
 		hdr->sh_entsize = 0;
 	}
+	{ /* .note.GNU-stack header */
+		Elf64_Shdr *hdr = sect_header+5;
+		hdr->sh_name = 33;
+		hdr->sh_type = SHT_PROGBITS;
+		hdr->sh_flags = 0;
+		hdr->sh_addr = 0;
+		hdr->sh_offset = (hdr-1)->sh_offset + shstrtab_len;
+		hdr->sh_size = 0;
+		hdr->sh_link = 0;
+		hdr->sh_info = 0;
+		hdr->sh_addralign = 1;
+		hdr->sh_entsize = 0;
+	}
 
 	{ /* symtab */
 		// null entry
@@ -193,7 +206,7 @@ int objcopy(uint8_t *input, char *basename)
 			return 1;
 		}
 		// section headers
-		if(fwrite(sect_header, sizeof(Elf64_Shdr), 5, outf) != 5) {
+		if(fwrite(sect_header, sizeof(Elf64_Shdr), 6, outf) != 6) {
 			PERROR(fwrite);
 			fclose(outf);
 			return 1;
