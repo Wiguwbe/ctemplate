@@ -742,6 +742,12 @@ int generate_template(FILE *input, char *basename)
 			goto _c_end;
 		}
 
+		// final flush
+		if(fprintf(c_file, "fflush(file);\n") < 0) {
+			PERROR(fprintf);
+			goto _c_end;
+		}
+
 		// return 0;
 		if(fprintf(c_file, "return 0;\n}\n") < 0) {
 			PERROR(fprintf);
